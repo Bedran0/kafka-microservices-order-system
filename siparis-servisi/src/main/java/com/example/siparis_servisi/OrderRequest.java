@@ -23,7 +23,6 @@ public class OrderRequest {
         this.items = items;
     }
 
-    // Ic sinif: bir kalem istegi (urun + adet)
     public static class ItemRequest {
         private String product;
         private int quantity;
