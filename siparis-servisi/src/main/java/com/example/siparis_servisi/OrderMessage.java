@@ -36,7 +36,6 @@ public class OrderMessage {
         this.items = items;
     }
 
-    // Ic sinif: tek bir item
     public static class ItemMessage {
         private String product;
         private int quantity;
