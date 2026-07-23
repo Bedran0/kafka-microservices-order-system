@@ -18,12 +18,10 @@ public class ResultConsumer {
     public void handleResult(OrderResult result) {
         System.out.println(">>> Sonuc geldi: " + result.getOrderId() + " -> " + result.getStatus());
 
-        // Gelen cevaptaki orderId ile siparisi veritabanindan bul
         Optional<Order> orderOptional = orderRepository.findById(result.getOrderId());
 
         if (orderOptional.isPresent()) {
             Order order = orderOptional.get();
-            // Durumu ve sebebi guncelle
             order.setStatus(result.getStatus());
             order.setReason(result.getReason());
             orderRepository.save(order);
