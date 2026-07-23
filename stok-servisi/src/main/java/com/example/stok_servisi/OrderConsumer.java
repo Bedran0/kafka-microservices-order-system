@@ -24,14 +24,14 @@ public class OrderConsumer {
                 + " | Musteri: " + order.getCustomerName()
                 + " | " + order.getItems().size() + " item");
 
-        // ADIM 1: Tum itemlari KONTROL et (henuz stok dusurme)
+        // check all items
         List<Stock> stocksToUpdate = new ArrayList<>();
 
         for (Order.OrderItem item : order.getItems()) {
             Optional<Stock> stockOptional = stockRepository.findByProduct(item.getProduct());
 
             if (stockOptional.isEmpty()) {
-                // Bu urun depoda hic yok -> tum siparis reddedilir
+                // if product doesn't exist in the db, reject entire order
                 sendResult(order, "REDDEDILDI", "Urun bulunamadi: " + item.getProduct());
                 return;
             }
@@ -39,7 +39,7 @@ public class OrderConsumer {
             Stock stock = stockOptional.get();
 
             if (stock.getQuantity() < item.getQuantity()) {
-                // Yetersiz stok -> tum siparis reddedilir
+                // if stock is insufficient, reject entire order
                 sendResult(order, "REDDEDILDI",
                         "Yetersiz stok: " + item.getProduct()
                                 + " (istenen: " + item.getQuantity()
@@ -47,17 +47,17 @@ public class OrderConsumer {
                 return;
             }
 
-            // Bu item uygun - dusurulecekler listesine ekle
+            // item is valid, so add to the list to be updated
             stock.setQuantity(stock.getQuantity() - item.getQuantity());
             stocksToUpdate.add(stock);
         }
 
-        // ADIM 2: Buraya geldiysek TUM itemlar uygun -> stoklari kaydet
+        // if we reached here, all items are valid. So, save stocks
         stockRepository.saveAll(stocksToUpdate);
         sendResult(order, "ONAYLANDI", "Tum urunler stokta mevcut");
     }
 
-    // Sonucu olusturup Kafka'ya yollayan yardimci metot
+    // generates the result and sends it to Kafka
     private void sendResult(Order order, String status, String reason) {
         OrderResult result = new OrderResult();
         result.setOrderId(order.getOrderId());
