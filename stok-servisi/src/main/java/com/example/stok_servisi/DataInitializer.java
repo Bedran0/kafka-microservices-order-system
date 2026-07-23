@@ -10,7 +10,7 @@ public class DataInitializer {
     @Bean
     public ApplicationRunner initStock(StockRepository stockRepository) {
         return args -> {
-            // Eger veritabani bossa baslangic verilerini ekle
+            // If the db is empty, insert initial values
             if (stockRepository.count() == 0) {
                 stockRepository.save(new Stock("keyboard", 10));
                 stockRepository.save(new Stock("mouse", 3));
