@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mağaza Sipariş</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 520px;
+            margin: 40px auto;
+            padding: 0 20px;
+            color: #1a1a1a;
+        }
+        h1 { font-size: 1.4rem; }
+        label { display: block; margin: 16px 0 4px; font-weight: 600; font-size: 0.9rem; }
+        input, button, select {
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+        }
+        #customerName { width: 100%; }
+        .item-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+        .item-row input.product { flex: 2; }
+        .item-row input.qty { flex: 1; }
+        .remove-btn {
+            background: #fee2e2;
+            border: 1px solid #fca5a5;
+            color: #b91c1c;
+            cursor: pointer;
+            padding: 8px 12px;
+        }
+        .add-btn {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            cursor: pointer;
+            margin-top: 4px;
+        }
+        #orderBtn {
+            width: 100%;
+            margin-top: 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        #orderBtn:disabled { background: #9ca3af; cursor: not-allowed; }
+        #result {
+            margin-top: 24px;
+            padding: 16px;
+            border-radius: 8px;
+            display: none;
+        }
+        .pending { background: #fef9c3; }
+        .approved { background: #dcfce7; }
+        .rejected { background: #fee2e2; }
+        .result-status { font-weight: 700; font-size: 1.1rem; }
+        .result-reason { margin-top: 4px; font-size: 0.9rem; color: #444; }
+    </style>
+</head>
+<body>
+<h1>Mağaza Sipariş Sistemi</h1>
+
+<label for="customerName">Müşteri Adı</label>
+<input id="customerName" type="text" placeholder="Ahmet" value="Ahmet">
+
+<label>Ürünler</label>
+<div id="itemsContainer">
+    <!-- item satirlari buraya eklenecek -->
+</div>
+<button class="add-btn" onclick="addItemRow()">+ Ürün Ekle</button>
+
+<button id="orderBtn" onclick="placeOrder()">Sipariş Ver</button>
+
+<div id="result"></div>
+
+<script>
+    // Sayfa acilinca bir bos satir ekle
+    addItemRow();
+
+    function addItemRow(product = '', quantity = 1) {
+        const container = document.getElementById('itemsContainer');
+        const row = document.createElement('div');
+        row.className = 'item-row';
+        row.innerHTML = `
+                <input class="product" type="text" placeholder="keyboard, mouse, monitor..." value="${product}">
+                <input class="qty" type="number" min="1" value="${quantity}">
+                <button class="remove-btn" onclick="removeItemRow(this)">Sil</button>
+            `;
+        container.appendChild(row);
+    }
+
+    function removeItemRow(btn) {
+        const container = document.getElementById('itemsContainer');
+        // En az bir satir kalsin
+        if (container.children.length > 1) {
+            btn.parentElement.remove();
+        }
+    }
+
+    async function placeOrder() {
+        const btn = document.getElementById('orderBtn');
+        const resultDiv = document.getElementById('result');
+        const customerName = document.getElementById('customerName').value;
+
+        // Formdaki tum item satirlarini topla
+        const items = [];
+        document.querySelectorAll('.item-row').forEach(row => {
+            const product = row.querySelector('.product').value.trim();
+            const quantity = parseInt(row.querySelector('.qty').value);
+            if (product && quantity > 0) {
+                items.push({ product, quantity });
+            }
+        });
+
+        if (!customerName.trim() || items.length === 0) {
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'rejected';
+            resultDiv.innerHTML = '<div class="result-status">Eksik bilgi</div>' +
+                '<div class="result-reason">Müşteri adı ve en az bir ürün gerekli.</div>';
+            return;
+        }
+
+        btn.disabled = true;
+        resultDiv.style.display = 'block';
+        resultDiv.className = 'pending';
+        resultDiv.innerHTML = '<div class="result-status">Siparişiniz işleniyor...</div>';
+
+        // 1. Siparisi olustur (POST)
+        const response = await fetch('/orders', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customerName, items })
+        });
+        const order = await response.json();
+
+        // 2. Durumu yokla (polling)
+        pollStatus(order.orderId, 0);
+    }
+
+    async function pollStatus(orderId, attempt) {
+        const resultDiv = document.getElementById('result');
+        const btn = document.getElementById('orderBtn');
+
+        const response = await fetch('/orders/' + orderId);
+        const order = await response.json();
+
+        if (order.status === 'BEKLEMEDE' && attempt < 10) {
+            setTimeout(() => pollStatus(orderId, attempt + 1), 1000);
+            return;
+        }
+
+        btn.disabled = false;
+        if (order.status === 'ONAYLANDI') {
+            resultDiv.className = 'approved';
+        } else if (order.status === 'REDDEDILDI') {
+            resultDiv.className = 'rejected';
+        } else {
+            resultDiv.className = 'pending';
+        }
+        resultDiv.innerHTML =
+            '<div class="result-status">' + order.status + '</div>' +
+            '<div class="result-reason">' + (order.reason || '') + '</div>';
+    }
+</script>
+</body>
+</html>
