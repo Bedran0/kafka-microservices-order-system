@@ -1,19 +1,14 @@
-# Derleme ciktilari
 target/
 *.class
 
-# Veritabani dosyalari (eski H2 kalintilari)
 data/
 *.db
 *.mv.db
 
-# IDE ayarlari
 .idea/
 *.iml
 .vscode/
 
-# Loglar
 *.log
 
-# Mac
 .DS_Store
