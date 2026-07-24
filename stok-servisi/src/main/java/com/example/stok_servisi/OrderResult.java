@@ -3,9 +3,6 @@ package com.example.stok_servisi;
 public class OrderResult {
 
     private String orderId;
-    private String product;
-    private int quantity;
-
     private String status;
     private String reason;
 
